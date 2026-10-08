@@ -1,0 +1,69 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isStoreAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/store_admins/$(request.auth.uid))
+        && get(/databases/$(database)/documents/store_admins/$(request.auth.uid)).data.enabled == true;
+    }
+
+    match /store_admins/{userId} {
+      allow read: if signedIn() && request.auth.uid == userId;
+      allow write: if false;
+    }
+
+    match /products/{productId} {
+      allow read: if resource.data.active == true || isStoreAdmin();
+      allow create, update: if isStoreAdmin()
+        && request.resource.data.keys().hasOnly([
+          'name', 'category', 'price', 'image', 'description',
+          'featured', 'active', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 80
+        && request.resource.data.category is string
+        && request.resource.data.category.size() > 0
+        && request.resource.data.category.size() <= 50
+        && request.resource.data.price is number
+        && request.resource.data.price >= 0
+        && request.resource.data.image is string
+        && request.resource.data.description is string
+        && request.resource.data.description.size() <= 240
+        && request.resource.data.featured is bool
+        && request.resource.data.active is bool;
+      allow delete: if isStoreAdmin();
+    }
+
+    match /store_settings/{settingsId} {
+      allow read: if true;
+      allow create, update: if isStoreAdmin()
+        && settingsId == 'main'
+        && request.resource.data.keys().hasOnly([
+          'announcement', 'navShop', 'navStory', 'navContact',
+          'eyebrow', 'title', 'description', 'heroCta', 'heroNote',
+          'heroCaption', 'heroRoundel', 'heroImage', 'collectionEyebrow',
+          'collectionTitle', 'collectionIntro', 'collectionLabel',
+          'featuredBadge', 'storyEyebrow', 'storyTitle',
+          'storyDescription', 'storyImage', 'storyStamp', 'storyCta',
+          'promiseOne', 'promiseTwo', 'promiseThree', 'whatsapp',
+          'footerWhatsappLabel', 'footerMessage', 'checkoutNote',
+          'checkoutButton', 'currency', 'updatedAt'
+        ]);
+      allow delete: if isStoreAdmin();
+    }
+
+    match /orders/{orderId} {
+      allow read, delete: if isStoreAdmin();
+      allow create: if false;
+      allow update: if isStoreAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+        && request.resource.data.status in ['new', 'contacted', 'completed'];
+    }
+  }
+}

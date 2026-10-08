@@ -4,3 +4,8 @@ dist/
 .env.*
 !.env.example
 datbasepassword.txt
+.firebase/
+.runtimeconfig.json
+service-account*.json
+*serviceAccount*.json
+*.pem

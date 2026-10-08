@@ -1,30 +1,26 @@
 # Auvne
 
-A responsive eyewear shop built with HTML, CSS, JavaScript, Vite, and Supabase. Customers can browse products and place orders; the owner signs in to edit the storefront and manage products and orders. Order totals are calculated from current product prices in Postgres before the order is saved and opened in WhatsApp.
+A responsive eyewear shop powered by Firebase Authentication, Cloud Firestore, Cloud Functions, and Firebase Hosting.
 
 ## Run locally
 
-1. Install Node.js 20 or newer.
-2. Copy `.env.example` to `.env.local` and set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` from the Supabase project's API settings. These browser variables are public; never put a Supabase secret/service-role key in a frontend environment variable.
-3. In the Supabase SQL Editor, run [`supabase/migrations/202610080001_auvne_store.sql`](./supabase/migrations/202610080001_auvne_store.sql).
-4. Create the shop owner's account in Supabase Dashboard → Authentication → Users. Then grant that account admin access in the SQL Editor, replacing the address:
+1. Install Node.js 20 or later.
+2. Copy `.env.example` to `.env.local` and add the Firebase web app's configuration values. The Firebase web API key and app IDs are public browser configuration; never put a service-account private key in a `VITE_` variable.
+3. In Firebase Console for project `auvne-eba39`, create a Cloud Firestore database and enable Email/Password in Authentication.
+4. Install the project dependencies with `npm install` and run the storefront with `npm run dev`.
+5. In Firebase Authentication, create the owner's account. Copy its UID, then add a Firestore document at `store_admins/{OWNER_UID}` with the boolean field `enabled: true`. Firestore rules deny browser clients the ability to add or change admin records.
+6. Open `/admin.html` and sign in. The first authorized sign-in creates the default storefront settings and products.
 
-   ```sql
-   insert into public.store_admins (user_id)
-   select id from auth.users where email = 'owner@example.com'
-   on conflict (user_id) do nothing;
-   ```
+Customers can read public products and storefront content, but only the server-side Cloud Function can create orders. The function validates products and computes the order total from their current Firestore prices. Only an explicitly authorized admin can read, edit, or delete orders and change products and storefront content.
 
-5. Run `npm install`, then `npm run dev`. Open the local URL Vite prints. The customer shop is `/`; the admin studio is `/admin.html`.
+## Firebase services and deployment
 
-The Supabase migration enables row-level security. Customers can read active products and storefront content and can submit orders only through the database order function. Only the account explicitly listed in `store_admins` can change products/content or view/manage orders. Do not grant admin access to customer accounts.
+The Firebase CLI is installed and authenticated, and this repository is linked to `auvne-eba39`.
 
-## Deploy
+Run `firebase deploy` to build and deploy the Hosting site, Firestore rules, and Cloud Functions. Cloud Functions deployment requires the Firebase project to have the necessary Google Cloud APIs enabled and billing configured. The runtime uses Firebase's managed service identity; no downloaded service-account JSON key is needed.
 
-Deploy the repository as a Vite static site (build command `npm run build`, output directory `dist`). Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` as build environment variables in the hosting provider, and run the migration once against the Supabase project. Never configure `SUPABASE_SECRET_KEY` or a service-role key in the frontend or build environment.
+The Functions region is `us-central1`. After setting the shop phone number and currency in the admin studio, WhatsApp checkout saves the order in Firestore and opens the customer's prepared message.
 
-Set the shop's WhatsApp number and currency in the admin studio after signing in. WhatsApp checkout opens a prefilled order message in a new tab; the order is stored in Supabase before the customer is redirected.
+## Credentials
 
-## Security
-
-The Supabase secret key must remain private. If a secret key has been shared or exposed, rotate it in the Supabase dashboard. The publishable key is designed to be included in browser code; database access is protected by the migration's row-level security policies.
+`.env.local`, service-account key files, and build output are excluded from Git. A Firebase web API key is public client configuration; an Admin SDK service-account private key, Firebase secret, or Web Push private key is not. If a private key or secret has been exposed, rotate or revoke it in Google Cloud/Firebase immediately. Firebase Analytics and push notifications are not initialized by this shop.
