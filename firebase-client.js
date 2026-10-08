@@ -1,7 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-import { getFunctions } from "firebase/functions";
 
 const config = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -16,7 +14,5 @@ export const firebaseConfigError = Object.values(config).some(value => !value)
   ? "Set the Firebase web app configuration in .env.local and restart the dev server."
   : "";
 
-const firebaseApp = firebaseConfigError ? null : initializeApp(config);
-export const auth = firebaseApp ? getAuth(firebaseApp) : null;
+export const firebaseApp = firebaseConfigError ? null : initializeApp(config);
 export const db = firebaseApp ? getFirestore(firebaseApp) : null;
-export const functions = firebaseApp ? getFunctions(firebaseApp, "us-central1") : null;

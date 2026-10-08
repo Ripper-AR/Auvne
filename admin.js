@@ -1,6 +1,6 @@
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, orderBy, query, serverTimestamp, setDoc, updateDoc, writeBatch } from "firebase/firestore";
-import { auth, db, firebaseConfigError } from "./firebase-client.js";
+import { auth, db, firebaseConfigError } from "./firebase-admin-client.js";
 
 const SETTINGS_FIELDS = [
   "announcement", "navShop", "navStory", "navContact", "eyebrow", "title", "description",
@@ -234,9 +234,9 @@ function renderOrders(orders) {
     details.append(makeElement("p", "order-meta", `${order.reference} · ${date} · ${order.customerPhone || "No phone number"}`));
     const items = Array.isArray(order.items) ? order.items : [];
     details.append(makeElement("p", "order-products", items.map(item =>
-      `${item.name} × ${item.quantity} (${formatPrice(Number(item.price) * item.quantity)})`
+      `${item.name} × ${item.quantity} (${formatPrice(item.priceCents / 100 * item.quantity)})`
     ).join(" · ")));
-    const total = makeElement("div", "order-total", formatPrice(order.total));
+    const total = makeElement("div", "order-total", formatPrice(order.totalCents / 100));
     const actions = makeElement("div", "order-card-actions");
     const digits = String(order.customerPhone || "").replace(/\D/g, "");
     if (digits) {
@@ -328,8 +328,11 @@ productForm.addEventListener("submit", async event => {
     active: true,
     updatedAt: serverTimestamp()
   };
-  if (!product.name || !product.category || !product.image || !product.description ||
-    !Number.isFinite(product.price) || product.price < 0) {
+  if (!Number.isFinite(product.price) || product.price < 0 || product.price > 1000000) {
+    showToast("Product prices must be between 0 and 1,000,000.");
+    return;
+  }
+  if (!product.name || !product.category || !product.image || !product.description) {
     showToast("Please check the product details and try again.");
     return;
   }

@@ -1,6 +1,5 @@
-import { httpsCallable } from "firebase/functions";
-import { collection, doc, onSnapshot, where, query } from "firebase/firestore";
-import { db, firebaseConfigError, functions } from "./firebase-client.js";
+import { collection, doc, onSnapshot, query, serverTimestamp, setDoc, where } from "firebase/firestore";
+import { db, firebaseConfigError } from "./firebase-client.js";
 
 const CART_KEY = "auvne-cart-v1";
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&w=1100&q=85";
@@ -198,6 +197,10 @@ function changeQuantity(id, amount) {
     showStoreError("You can add up to 20 of each frame per order.");
     return;
   }
+  if (!current && amount > 0 && cart.length >= 10) {
+    showStoreError("You can order up to 10 different frames at a time.");
+    return;
+  }
   if (current) current.quantity += amount;
   else if (amount > 0) cart.push({ id, quantity: amount });
   cart = cart.filter(item => item.quantity > 0);
@@ -279,8 +282,12 @@ document.addEventListener("keydown", event => {
 
 document.getElementById("checkout-form").addEventListener("submit", async event => {
   event.preventDefault();
-  if (!functions || !productsLoaded || cart.length === 0) {
+  if (!db || !productsLoaded || cart.length === 0) {
     showStoreError("Checkout is not ready. Please try again once the shop finishes connecting.");
+    return;
+  }
+  if (cart.length > 10) {
+    showStoreError("Your bag has more than 10 different frames. Remove some frames before checking out.");
     return;
   }
   if (!settings.whatsapp) {
@@ -295,23 +302,38 @@ document.getElementById("checkout-form").addEventListener("submit", async event 
   const submitButton = event.currentTarget.querySelector('button[type="submit"]');
   submitButton.disabled = true;
   try {
-    const placeOrder = httpsCallable(functions, "placeOrder");
-    const result = await placeOrder({
+    const items = cart.map(item => {
+      const product = products.find(candidate => candidate.id === item.id);
+      if (!product || product.active !== true) throw new Error("One of the selected products is no longer available.");
+      return {
+        id: product.id,
+        name: product.name,
+        priceCents: Math.round(Number(product.price) * 100),
+        quantity: item.quantity
+      };
+    });
+    const totalCents = items.reduce((sum, item) => sum + item.priceCents * item.quantity, 0);
+    const orderId = doc(collection(db, "orders")).id;
+    const reference = `AUV-${orderId.replaceAll("-", "").slice(0, 10).toUpperCase()}`;
+    await setDoc(doc(db, "orders", orderId), {
+      reference,
       customerName: name,
       customerPhone: phone,
-      items: cart.map(item => ({ id: item.id, quantity: item.quantity }))
+      items,
+      totalCents,
+      status: "new",
+      createdAt: serverTimestamp()
     });
-    const data = result.data;
     const message = [
       "Hello Auvne! I'd love to place an order.",
       `Name: ${name}`,
       `Phone: ${phone}`,
       "",
       "My selection:",
-      ...data.items.map(item => `• ${item.name} × ${item.quantity} — ${formatPrice(Number(item.price) * item.quantity)}`),
+      ...items.map(item => `• ${item.name} × ${item.quantity} — ${formatPrice(item.priceCents / 100 * item.quantity)}`),
       "",
-      `Total: ${formatPrice(data.total)}`,
-      `Order reference: ${data.reference}`
+      `Total: ${formatPrice(totalCents / 100)}`,
+      `Order reference: ${reference}`
     ].join("\n");
     const whatsappUrl = `https://wa.me/${settings.whatsapp}?text=${encodeURIComponent(message)}`;
     cart = [];

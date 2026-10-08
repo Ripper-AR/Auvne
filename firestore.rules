@@ -12,6 +12,64 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/store_admins/$(request.auth.uid)).data.enabled == true;
     }
 
+    function productPath(productId) {
+      return /databases/$(database)/documents/products/$(productId);
+    }
+
+    function validOrderLine(item) {
+      return item is map
+        && item.keys().hasOnly(['id', 'name', 'priceCents', 'quantity'])
+        && item.keys().hasAll(['id', 'name', 'priceCents', 'quantity'])
+        && item.id is string
+        && item.id.size() > 0
+        && item.id.size() <= 128
+        && exists(productPath(item.id))
+        && get(productPath(item.id)).data.active == true
+        && item.name == get(productPath(item.id)).data.name
+        && item.priceCents is int
+        && item.priceCents == math.round(get(productPath(item.id)).data.price * 100)
+        && item.quantity is int
+        && item.quantity >= 1
+        && item.quantity <= 20;
+    }
+
+    function validOrderLineAt(items, index) {
+      return items.size() <= index || validOrderLine(items[index]);
+    }
+
+    function lineTotalCents(item) {
+      return item.priceCents * item.quantity;
+    }
+
+    function validOrderItems(items) {
+      return items is list
+        && items.size() >= 1
+        && items.size() <= 10
+        && validOrderLineAt(items, 0)
+        && validOrderLineAt(items, 1)
+        && validOrderLineAt(items, 2)
+        && validOrderLineAt(items, 3)
+        && validOrderLineAt(items, 4)
+        && validOrderLineAt(items, 5)
+        && validOrderLineAt(items, 6)
+        && validOrderLineAt(items, 7)
+        && validOrderLineAt(items, 8)
+        && validOrderLineAt(items, 9);
+    }
+
+    function orderTotalCents(items) {
+      return (items.size() > 0 ? lineTotalCents(items[0]) : 0)
+        + (items.size() > 1 ? lineTotalCents(items[1]) : 0)
+        + (items.size() > 2 ? lineTotalCents(items[2]) : 0)
+        + (items.size() > 3 ? lineTotalCents(items[3]) : 0)
+        + (items.size() > 4 ? lineTotalCents(items[4]) : 0)
+        + (items.size() > 5 ? lineTotalCents(items[5]) : 0)
+        + (items.size() > 6 ? lineTotalCents(items[6]) : 0)
+        + (items.size() > 7 ? lineTotalCents(items[7]) : 0)
+        + (items.size() > 8 ? lineTotalCents(items[8]) : 0)
+        + (items.size() > 9 ? lineTotalCents(items[9]) : 0);
+    }
+
     match /store_admins/{userId} {
       allow read: if signedIn() && request.auth.uid == userId;
       allow write: if false;
@@ -32,6 +90,7 @@ service cloud.firestore {
         && request.resource.data.category.size() <= 50
         && request.resource.data.price is number
         && request.resource.data.price >= 0
+        && request.resource.data.price <= 1000000
         && request.resource.data.image is string
         && request.resource.data.description is string
         && request.resource.data.description.size() <= 240
@@ -60,7 +119,27 @@ service cloud.firestore {
 
     match /orders/{orderId} {
       allow read, delete: if isStoreAdmin();
-      allow create: if false;
+      allow create: if request.resource.data.keys().hasOnly([
+          'reference', 'customerName', 'customerPhone', 'items',
+          'totalCents', 'status', 'createdAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'reference', 'customerName', 'customerPhone', 'items',
+          'totalCents', 'status', 'createdAt'
+        ])
+        && request.resource.data.reference is string
+        && request.resource.data.reference.matches('^AUV-[A-Z0-9]{10}$')
+        && request.resource.data.customerName is string
+        && request.resource.data.customerName.size() >= 1
+        && request.resource.data.customerName.size() <= 100
+        && request.resource.data.customerPhone is string
+        && request.resource.data.customerPhone.size() >= 3
+        && request.resource.data.customerPhone.size() <= 30
+        && validOrderItems(request.resource.data.items)
+        && request.resource.data.totalCents is int
+        && request.resource.data.totalCents == orderTotalCents(request.resource.data.items)
+        && request.resource.data.status == 'new'
+        && request.resource.data.createdAt == request.time;
       allow update: if isStoreAdmin()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
         && request.resource.data.status in ['new', 'contacted', 'completed'];
