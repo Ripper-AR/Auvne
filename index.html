@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f7f5f0">
+  <meta name="description" content="Find the frames that feel like you. Discover considered eyewear at Auvne.">
+  <title>Auvne — See things differently</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <div class="announcement-bar" id="announcement-bar"></div>
+  <header class="site-header">
+    <a class="brand" href="#" aria-label="Auvne home">AUVNE<span class="brand-dot">.</span></a>
+    <nav class="main-nav" aria-label="Main navigation">
+      <a href="#collection" id="nav-shop">Shop all</a>
+      <a href="#story" id="nav-story">Our story</a>
+      <a href="#contact" id="nav-contact">Contact</a>
+    </nav>
+    <button class="cart-trigger" id="cart-trigger" type="button" aria-label="Open shopping bag">
+      Bag <span class="cart-count" id="cart-count">0</span>
+    </button>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow" id="hero-eyebrow"></p>
+        <h1 id="hero-title"></h1>
+        <p class="hero-description" id="hero-description"></p>
+        <a class="button button-dark" href="#collection"><span id="hero-cta">Discover the collection</span><span aria-hidden="true">↗</span></a>
+        <div class="hero-note"><span class="note-star">✳</span><span id="hero-note">Thoughtful frames.<br>Everyday perspective.</span></div>
+      </div>
+      <div class="hero-art">
+        <img id="hero-image" alt="Auvne eyewear campaign">
+        <div class="hero-image-caption"><span>01 / 03</span><span id="hero-caption">Made for your point of view</span></div>
+        <div class="hero-roundel" aria-hidden="true"><span id="hero-roundel">A BETTER<br>POINT OF<br>VIEW</span><span>✳</span></div>
+      </div>
+    </section>
+
+    <section class="collection section-wrap" id="collection">
+      <div class="section-heading">
+        <div><p class="eyebrow" id="collection-eyebrow">A little something for your eyes</p><h2 id="collection-title">Meet your new<br>favourite frames.</h2></div>
+          <p class="section-intro" id="collection-intro">Easy to wear, hard to forget.<br>Find the pair that feels like you.</p>
+      </div>
+      <div class="filter-row"><span id="collection-label">THE COLLECTION</span><span id="product-total"></span></div>
+      <p class="store-status" id="store-status" role="status" hidden></p>
+      <div class="product-grid" id="product-grid"></div>
+    </section>
+
+    <section class="story" id="story">
+      <div class="story-image">
+        <img id="story-image" src="https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&w=1100&q=85" alt="A considered collection of eyewear">
+        <span class="image-stamp" id="story-stamp">AUVNE<br>EST. WITH CARE</span>
+      </div>
+      <div class="story-copy">
+        <p class="eyebrow" id="story-eyebrow">A clearer kind of everyday</p>
+        <h2 id="story-title">Good frames.<br>Good feeling.</h2>
+        <p id="story-description">We believe the right pair can shift your whole perspective. Auvne brings together considered shapes, everyday comfort, and the little details that make a frame feel like yours.</p>
+        <a href="#collection" class="text-link"><span id="story-cta">Find your pair</span><span aria-hidden="true">↗</span></a>
+        <div class="story-mark" aria-hidden="true">A.</div>
+      </div>
+    </section>
+
+    <section class="promise-strip">
+      <div><span>01</span><p id="promise-one">Thoughtful<br>design</p></div>
+      <div><span>02</span><p id="promise-two">Made for<br>everyday</p></div>
+      <div><span>03</span><p id="promise-three">A little more<br>you</p></div>
+    </section>
+  </main>
+
+  <footer class="site-footer" id="contact">
+    <div><a class="brand footer-brand" href="#">AUVNE<span class="brand-dot">.</span></a><p id="footer-message"></p></div>
+    <div class="footer-right"><a id="footer-whatsapp" href="#" target="_blank" rel="noopener noreferrer"><span id="footer-whatsapp-label">Say hello on WhatsApp</span> ↗</a><span>© <span id="footer-year"></span> Auvne</span></div>
+  </footer>
+
+  <div class="cart-backdrop" id="cart-backdrop" hidden></div>
+  <aside class="cart-drawer" id="cart-drawer" aria-label="Shopping bag" aria-hidden="true">
+    <div class="cart-heading"><div><p class="eyebrow">YOUR SELECTION</p><h2>Your bag <span id="drawer-count">(0)</span></h2></div><button class="icon-button" id="close-cart" type="button" aria-label="Close shopping bag">×</button></div>
+    <div class="cart-items" id="cart-items"></div>
+    <div class="cart-empty" id="cart-empty"><span>✳</span><p>Your bag is taking a little breather.</p><a href="#collection" id="empty-shop-link">Find your frames ↗</a></div>
+    <div class="cart-bottom" id="cart-bottom" hidden>
+      <div class="cart-total"><span>Subtotal</span><strong id="cart-total"></strong></div>
+      <p class="checkout-note" id="checkout-note">Your order will open in WhatsApp so we can help you personally.</p>
+      <form id="checkout-form" class="checkout-form">
+        <label for="customer-name">Your name</label><input id="customer-name" name="name" autocomplete="name" required placeholder="What should we call you?">
+        <label for="customer-phone">Your phone number</label><input id="customer-phone" name="phone" type="tel" autocomplete="tel" required placeholder="So we can get back to you">
+        <button class="button button-dark checkout-button" id="checkout-button-label" type="submit"><span>Continue to WhatsApp</span><span aria-hidden="true">↗</span></button>
+      </form>
+    </div>
+  </aside>
+</body>
+</html>

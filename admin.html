@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f7f5f0">
+  <title>Store studio — Auvne</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="admin.js"></script>
+</head>
+<body class="admin-body">
+  <header class="site-header admin-header">
+    <a class="brand" href="index.html">AUVNE<span class="brand-dot">.</span></a>
+    <nav class="main-nav" id="admin-nav" aria-label="Admin navigation" hidden><a href="#orders">Orders</a><a href="#products">Products</a><a href="#storefront">Storefront</a></nav>
+    <a class="admin-preview-link" href="index.html" target="_blank" rel="noopener noreferrer">View storefront ↗</a>
+  </header>
+  <main class="login-gate" id="login-gate">
+    <form class="login-card" id="login-form">
+      <p class="eyebrow">JUST FOR THE SHOP OWNER</p>
+      <h1>Welcome back<span class="brand-dot">.</span></h1>
+      <p>Sign in to manage your products, orders, and storefront.</p>
+      <label for="admin-email">Email address</label>
+      <input id="admin-email" name="email" type="email" autocomplete="username" required>
+      <label for="admin-password">Password</label>
+      <input id="admin-password" name="password" type="password" autocomplete="current-password" required>
+      <button class="button button-dark checkout-button" type="submit">Sign in <span aria-hidden="true">↗</span></button>
+      <p class="login-error" id="login-error" role="alert" hidden></p>
+      <p class="field-hint">Create the owner account in Supabase Auth, then grant it store-admin access using the setup steps in README.</p>
+    </form>
+  </main>
+  <main class="admin-main" id="admin-main" hidden>
+    <div class="admin-welcome"><div><p class="eyebrow">YOUR LITTLE CORNER OF AUVNE</p><h1>Store studio<span class="brand-dot">.</span></h1><p>Make it yours. Keep your shop looking just the way you like it.</p></div><span class="studio-mark" aria-hidden="true">A.</span></div>
+    <div class="storage-notice"><span>✳</span><p>Products, storefront edits, and orders sync through Supabase. Customers are contacted directly on WhatsApp when they place an order.</p><button class="button button-outline button-small" id="sign-out" type="button">Sign out</button></div>
+
+    <section class="admin-panel" id="orders">
+      <div class="panel-heading"><div><p class="eyebrow">WHAT'S COMING IN</p><h2>Orders <span class="panel-count" id="order-count">0</span></h2></div><button class="button button-outline button-small" id="clear-orders" type="button">Clear orders</button></div>
+      <div class="orders-list" id="orders-list"></div>
+    </section>
+
+    <section class="admin-panel" id="products">
+      <div class="panel-heading"><div><p class="eyebrow">THE GOOD STUFF</p><h2>Your products</h2></div><button class="button button-dark button-small" id="add-product" type="button">Add a product <span aria-hidden="true">+</span></button></div>
+      <div class="admin-product-list" id="admin-product-list"></div>
+    </section>
+
+    <section class="admin-panel storefront-panel" id="storefront">
+      <div class="panel-heading"><div><p class="eyebrow">FIRST IMPRESSIONS</p><h2>Your storefront</h2></div></div>
+      <p class="panel-description">Give your homepage a refresh. Changes show up on the storefront as soon as you save.</p>
+      <form id="settings-form" class="settings-form">
+        <div class="form-row"><label for="setting-announcement">Announcement bar</label><input id="setting-announcement" name="announcement" maxlength="120" placeholder="A little note at the top of your shop"></div>
+        <div class="form-row"><label for="setting-nav-shop">Shop navigation label</label><input id="setting-nav-shop" name="navShop" maxlength="40" required></div>
+        <div class="form-row"><label for="setting-nav-story">Story navigation label</label><input id="setting-nav-story" name="navStory" maxlength="40" required></div>
+        <div class="form-row"><label for="setting-nav-contact">Contact navigation label</label><input id="setting-nav-contact" name="navContact" maxlength="40" required></div>
+        <div class="form-row"><label for="setting-eyebrow">Small heading</label><input id="setting-eyebrow" name="eyebrow" maxlength="60" required></div>
+        <div class="form-row"><label for="setting-title">Main headline</label><textarea id="setting-title" name="title" rows="2" maxlength="100" required></textarea><span class="field-hint">Use a new line for a line break.</span></div>
+        <div class="form-row"><label for="setting-description">A few words about the collection</label><textarea id="setting-description" name="description" rows="3" maxlength="240" required></textarea></div>
+        <div class="form-row"><label for="setting-hero-cta">Main button label</label><input id="setting-hero-cta" name="heroCta" maxlength="60" required></div>
+        <div class="form-row"><label for="setting-hero-note">Small hero note</label><textarea id="setting-hero-note" name="heroNote" rows="2" maxlength="100" required></textarea></div>
+        <div class="form-row"><label for="setting-hero-caption">Photo caption</label><input id="setting-hero-caption" name="heroCaption" maxlength="80" required></div>
+        <div class="form-row"><label for="setting-hero-roundel">Round photo badge</label><textarea id="setting-hero-roundel" name="heroRoundel" rows="3" maxlength="70" required></textarea></div>
+        <div class="form-row"><label for="setting-hero-image">Main image URL</label><input id="setting-hero-image" name="heroImage" type="url" required></div>
+        <div class="form-row"><label for="setting-collection-eyebrow">Shop section heading</label><input id="setting-collection-eyebrow" name="collectionEyebrow" maxlength="60" required></div>
+        <div class="form-row"><label for="setting-collection-title">Shop section title</label><textarea id="setting-collection-title" name="collectionTitle" rows="2" maxlength="100" required></textarea></div>
+        <div class="form-row"><label for="setting-collection-intro">Shop section description</label><textarea id="setting-collection-intro" name="collectionIntro" rows="3" maxlength="180" required></textarea></div>
+        <div class="form-row"><label for="setting-collection-label">Product list label</label><input id="setting-collection-label" name="collectionLabel" maxlength="40" required></div>
+        <div class="form-row"><label for="setting-featured-badge">Featured product badge</label><input id="setting-featured-badge" name="featuredBadge" maxlength="40" required></div>
+        <div class="form-row"><label for="setting-story-eyebrow">Our story heading</label><input id="setting-story-eyebrow" name="storyEyebrow" maxlength="60" required></div>
+        <div class="form-row"><label for="setting-story-title">Our story title</label><textarea id="setting-story-title" name="storyTitle" rows="2" maxlength="100" required></textarea></div>
+        <div class="form-row"><label for="setting-story-description">Our story text</label><textarea id="setting-story-description" name="storyDescription" rows="4" maxlength="500" required></textarea></div>
+        <div class="form-row"><label for="setting-story-image">Our story image URL</label><input id="setting-story-image" name="storyImage" type="url" required></div>
+        <div class="form-row"><label for="setting-story-stamp">Story image stamp</label><textarea id="setting-story-stamp" name="storyStamp" rows="2" maxlength="60" required></textarea></div>
+        <div class="form-row"><label for="setting-story-cta">Story button label</label><input id="setting-story-cta" name="storyCta" maxlength="60" required></div>
+        <div class="form-row"><label for="setting-promise-one">First highlight</label><input id="setting-promise-one" name="promiseOne" maxlength="60" required></div>
+        <div class="form-row"><label for="setting-promise-two">Second highlight</label><input id="setting-promise-two" name="promiseTwo" maxlength="60" required></div>
+        <div class="form-row"><label for="setting-promise-three">Third highlight</label><input id="setting-promise-three" name="promiseThree" maxlength="60" required></div>
+        <div class="form-row"><label for="setting-whatsapp">WhatsApp number</label><input id="setting-whatsapp" name="whatsapp" type="tel" inputmode="tel" placeholder="Country code + number, e.g. 15551234567"><span class="field-hint">Include your country code; do not include spaces or a + sign.</span></div>
+        <div class="form-row"><label for="setting-footer-whatsapp-label">WhatsApp link label</label><input id="setting-footer-whatsapp-label" name="footerWhatsappLabel" maxlength="60" required></div>
+        <div class="form-row"><label for="setting-footer-message">Footer message</label><input id="setting-footer-message" name="footerMessage" maxlength="120"></div>
+        <div class="form-row"><label for="setting-checkout-note">Checkout note</label><textarea id="setting-checkout-note" name="checkoutNote" rows="2" maxlength="160" required></textarea></div>
+        <div class="form-row"><label for="setting-checkout-button">Checkout button label</label><input id="setting-checkout-button" name="checkoutButton" maxlength="60" required></div>
+        <div class="form-row"><label for="setting-currency">Currency symbol</label><input id="setting-currency" name="currency" maxlength="5" required></div>
+        <button class="button button-dark" type="submit">Save storefront <span aria-hidden="true">↗</span></button>
+      </form>
+    </section>
+  </main>
+  <footer class="site-footer admin-footer"><a class="brand footer-brand" href="index.html">AUVNE<span class="brand-dot">.</span></a><a href="index.html">Back to the storefront ↗</a></footer>
+
+  <dialog class="product-dialog" id="product-dialog">
+    <form id="product-form" class="product-editor">
+      <div class="cart-heading"><div><p class="eyebrow">MAKE IT AUVNE</p><h2 id="dialog-title">Add a product</h2></div><button class="icon-button" id="close-dialog" type="button" aria-label="Close editor">×</button></div>
+      <input type="hidden" name="id">
+      <label for="product-name">Product name</label><input id="product-name" name="name" required maxlength="80">
+      <label for="product-category">Collection / category</label><input id="product-category" name="category" required maxlength="50" placeholder="Everyday frames">
+      <label for="product-price">Price</label><input id="product-price" name="price" required type="number" min="0" step="0.01">
+      <label for="product-image">Product image URL</label><input id="product-image" name="image" required type="url" placeholder="https://">
+      <label for="product-description">A little description</label><textarea id="product-description" name="description" rows="3" maxlength="240" required></textarea>
+      <label class="checkbox-label"><input name="featured" type="checkbox"> Feature on the homepage</label>
+      <button class="button button-dark checkout-button" type="submit">Save product <span aria-hidden="true">↗</span></button>
+    </form>
+  </dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
