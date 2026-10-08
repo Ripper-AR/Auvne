@@ -180,6 +180,8 @@ button { color: inherit; }
 .product-editor input[type="checkbox"] { accent-color: var(--olive); }
 .product-editor .checkbox-label { display: flex; align-items: center; gap: 8px; }
 .product-editor textarea { resize: vertical; }
+.upload-preview { width: 100%; max-height: 190px; object-fit: contain; background: #eeece5; }
+.upload-preview[hidden] { display: none; }
 .toast { position: fixed; z-index: 20; right: 22px; bottom: 22px; padding: 12px 17px; background: var(--ink); color: white; font-size: 10px; opacity: 0; pointer-events: none; transform: translateY(7px); transition: opacity .2s, transform .2s; }
 .toast.is-visible { opacity: 1; transform: translateY(0); }
 @media (max-width: 750px) {

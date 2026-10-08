@@ -60,7 +60,7 @@
         <div class="form-row"><label for="setting-hero-note">Small hero note</label><textarea id="setting-hero-note" name="heroNote" rows="2" maxlength="100" required></textarea></div>
         <div class="form-row"><label for="setting-hero-caption">Photo caption</label><input id="setting-hero-caption" name="heroCaption" maxlength="80" required></div>
         <div class="form-row"><label for="setting-hero-roundel">Round photo badge</label><textarea id="setting-hero-roundel" name="heroRoundel" rows="3" maxlength="70" required></textarea></div>
-        <div class="form-row"><label for="setting-hero-image">Main image URL</label><input id="setting-hero-image" name="heroImage" type="url" required></div>
+        <div class="form-row"><label for="setting-hero-image">Main image</label><input id="setting-hero-image" name="heroImageUpload" type="file" accept="image/jpeg,image/png,image/webp"><span class="field-hint">Upload a JPEG, PNG, or WebP image up to 5 MB. Leave empty to keep the current image.</span></div>
         <div class="form-row"><label for="setting-collection-eyebrow">Shop section heading</label><input id="setting-collection-eyebrow" name="collectionEyebrow" maxlength="60" required></div>
         <div class="form-row"><label for="setting-collection-title">Shop section title</label><textarea id="setting-collection-title" name="collectionTitle" rows="2" maxlength="100" required></textarea></div>
         <div class="form-row"><label for="setting-collection-intro">Shop section description</label><textarea id="setting-collection-intro" name="collectionIntro" rows="3" maxlength="180" required></textarea></div>
@@ -69,7 +69,7 @@
         <div class="form-row"><label for="setting-story-eyebrow">Our story heading</label><input id="setting-story-eyebrow" name="storyEyebrow" maxlength="60" required></div>
         <div class="form-row"><label for="setting-story-title">Our story title</label><textarea id="setting-story-title" name="storyTitle" rows="2" maxlength="100" required></textarea></div>
         <div class="form-row"><label for="setting-story-description">Our story text</label><textarea id="setting-story-description" name="storyDescription" rows="4" maxlength="500" required></textarea></div>
-        <div class="form-row"><label for="setting-story-image">Our story image URL</label><input id="setting-story-image" name="storyImage" type="url" required></div>
+        <div class="form-row"><label for="setting-story-image">Our story image</label><input id="setting-story-image" name="storyImageUpload" type="file" accept="image/jpeg,image/png,image/webp"><span class="field-hint">Upload a JPEG, PNG, or WebP image up to 5 MB. Leave empty to keep the current image.</span></div>
         <div class="form-row"><label for="setting-story-stamp">Story image stamp</label><textarea id="setting-story-stamp" name="storyStamp" rows="2" maxlength="60" required></textarea></div>
         <div class="form-row"><label for="setting-story-cta">Story button label</label><input id="setting-story-cta" name="storyCta" maxlength="60" required></div>
         <div class="form-row"><label for="setting-promise-one">First highlight</label><input id="setting-promise-one" name="promiseOne" maxlength="60" required></div>
@@ -94,7 +94,7 @@
       <label for="product-name">Product name</label><input id="product-name" name="name" required maxlength="80">
       <label for="product-category">Collection / category</label><input id="product-category" name="category" required maxlength="50" placeholder="Everyday frames">
       <label for="product-price">Price</label><input id="product-price" name="price" required type="number" min="0" max="1000000" step="0.01">
-      <label for="product-image">Product image URL</label><input id="product-image" name="image" required type="url" placeholder="https://">
+      <label for="product-image">Product image</label><input id="product-image" name="imageFile" type="file" accept="image/jpeg,image/png,image/webp"><span class="field-hint" id="product-image-hint">Choose a JPEG, PNG, or WebP image (up to 5 MB).</span><img class="upload-preview" id="product-image-preview" alt="Product image preview" hidden>
       <label for="product-description">A little description</label><textarea id="product-description" name="description" rows="3" maxlength="240" required></textarea>
       <label class="checkbox-label"><input name="featured" type="checkbox"> Feature on the homepage</label>
       <button class="button button-dark checkout-button" type="submit">Save product <span aria-hidden="true">↗</span></button>

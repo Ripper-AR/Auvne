@@ -1,6 +1,7 @@
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, orderBy, query, serverTimestamp, setDoc, updateDoc, writeBatch } from "firebase/firestore";
 import { auth, db, firebaseConfigError } from "./firebase-admin-client.js";
+import { deleteStoreImage, uploadStoreImage } from "./supabase-client.js";
 
 const SETTINGS_FIELDS = [
   "announcement", "navShop", "navStory", "navContact", "eyebrow", "title", "description",
@@ -10,6 +11,8 @@ const SETTINGS_FIELDS = [
   "promiseTwo", "promiseThree", "whatsapp", "footerWhatsappLabel", "footerMessage",
   "checkoutNote", "checkoutButton", "currency"
 ];
+const IMAGE_SETTING_FIELDS = ["heroImage", "storyImage"];
+const TEXT_SETTING_FIELDS = SETTINGS_FIELDS.filter(fieldName => !IMAGE_SETTING_FIELDS.includes(fieldName));
 
 const DEFAULT_SETTINGS = {
   announcement: "A little more you. A little more Auvne.",
@@ -65,6 +68,10 @@ const loginForm = document.getElementById("login-form");
 const loginError = document.getElementById("login-error");
 const adminMain = document.getElementById("admin-main");
 const signInButton = loginForm.querySelector('button[type="submit"]');
+const productImageFile = productForm.elements.imageFile;
+const productImagePreview = document.getElementById("product-image-preview");
+let productPreviewUrl = "";
+let currentProductImage = "";
 
 function formatPrice(price) {
   return `${settings.currency || "$"}${Number(price).toFixed(2)}`;
@@ -290,23 +297,48 @@ function renderOrders(orders) {
 
 function fillSettingsForm() {
   for (const fieldName of SETTINGS_FIELDS) {
+    if (IMAGE_SETTING_FIELDS.includes(fieldName)) continue;
     const field = document.getElementById(`setting-${fieldName.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`)}`);
     if (field) field.value = settings[fieldName] ?? "";
   }
 }
 
+function showProductImagePreview(url) {
+  productImagePreview.hidden = !url;
+  if (url) productImagePreview.src = url;
+  else productImagePreview.removeAttribute("src");
+}
+
 function openProductEditor(product) {
+  if (productPreviewUrl) URL.revokeObjectURL(productPreviewUrl);
+  productPreviewUrl = "";
   productForm.reset();
   document.getElementById("dialog-title").textContent = product ? "Edit product" : "Add a product";
   productForm.elements.id.value = product ? product.id : "";
   productForm.elements.name.value = product ? product.name : "";
   productForm.elements.category.value = product ? product.category : "";
   productForm.elements.price.value = product ? product.price : "";
-  productForm.elements.image.value = product ? product.image : "";
+  currentProductImage = product ? product.image : "";
+  document.getElementById("product-image-hint").textContent = product
+    ? "Choose a new image to replace the current one, or leave empty to keep it."
+    : "Choose a JPEG, PNG, or WebP image (up to 5 MB).";
+  showProductImagePreview(currentProductImage);
   productForm.elements.description.value = product ? product.description : "";
   productForm.elements.featured.checked = product ? Boolean(product.featured) : false;
   productDialog.showModal();
 }
+
+productImageFile.addEventListener("change", () => {
+  if (productPreviewUrl) URL.revokeObjectURL(productPreviewUrl);
+  productPreviewUrl = "";
+  const file = productImageFile.files[0];
+  if (file) {
+    productPreviewUrl = URL.createObjectURL(file);
+    showProductImagePreview(productPreviewUrl);
+  } else {
+    showProductImagePreview(currentProductImage);
+  }
+});
 
 document.getElementById("add-product").addEventListener("click", () => openProductEditor(null));
 document.getElementById("close-dialog").addEventListener("click", () => productDialog.close());
@@ -318,11 +350,12 @@ productForm.addEventListener("submit", async event => {
   event.preventDefault();
   const form = new FormData(productForm);
   const id = String(form.get("id") || "");
+  const imageFile = productImageFile.files[0];
   const product = {
     name: String(form.get("name")).trim(),
     category: String(form.get("category")).trim(),
     price: Number(form.get("price")),
-    image: String(form.get("image")).trim(),
+    image: currentProductImage,
     description: String(form.get("description")).trim(),
     featured: form.get("featured") === "on",
     active: true,
@@ -332,46 +365,110 @@ productForm.addEventListener("submit", async event => {
     showToast("Product prices must be between 0 and 1,000,000.");
     return;
   }
-  if (!product.name || !product.category || !product.image || !product.description) {
+  if (!product.name || !product.category || !product.description || (!imageFile && !product.image)) {
     showToast("Please check the product details and try again.");
     return;
   }
+  const submitButton = productForm.querySelector('button[type="submit"]');
+  submitButton.disabled = true;
+  let uploadedImage = null;
+  let saved = false;
+  const previousImage = currentProductImage;
   try {
     requireAdmin();
+    if (imageFile) {
+      uploadedImage = await uploadStoreImage(imageFile, "products");
+      product.image = uploadedImage.url;
+    }
     const productRef = doc(db, "products", id || crypto.randomUUID());
     if (!id) product.createdAt = serverTimestamp();
     await setDoc(productRef, product, { merge: true });
+    saved = true;
+    currentProductImage = product.image;
     productDialog.close();
     showToast(id ? "Product updated on your storefront." : "Your new product is on the storefront.");
   } catch (error) {
     console.error("Could not save Auvne product.", error);
+    if (uploadedImage && !saved) {
+      try {
+        await deleteStoreImage(uploadedImage.url);
+      } catch (cleanupError) {
+        console.error("Could not clean up an unused Auvne product image.", cleanupError);
+      }
+    }
     showToast(error.message || "Could not save that product.");
+  } finally {
+    submitButton.disabled = false;
+  }
+  if (saved && uploadedImage && previousImage && previousImage !== uploadedImage.url) {
+    try {
+      await deleteStoreImage(previousImage);
+    } catch (error) {
+      console.error("Could not remove the replaced Auvne product image.", error);
+      showToast("Product saved, but the previous image could not be removed.");
+    }
   }
 });
 
 document.getElementById("settings-form").addEventListener("submit", async event => {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
-  const nextSettings = {};
-  for (const fieldName of SETTINGS_FIELDS) {
+  const nextSettings = { ...settings };
+  for (const fieldName of TEXT_SETTING_FIELDS) {
     const value = String(form.get(fieldName) || "").trim();
     nextSettings[fieldName] = fieldName === "whatsapp" ? value.replace(/\D/g, "") : value;
   }
-  if (SETTINGS_FIELDS.some(fieldName => fieldName !== "whatsapp" && !nextSettings[fieldName])) {
+  if (TEXT_SETTING_FIELDS.some(fieldName => fieldName !== "whatsapp" && !nextSettings[fieldName])) {
     showToast("Please fill out each required storefront field.");
     return;
   }
+  const imageUploads = [
+    ["heroImage", form.get("heroImageUpload"), "storefront"],
+    ["storyImage", form.get("storyImageUpload"), "storefront"]
+  ].filter(([, file]) => file instanceof File && file.size > 0);
+  const saveButton = event.currentTarget.querySelector('button[type="submit"]');
+  saveButton.disabled = true;
+  const uploadedImages = [];
+  const previousSettings = { ...settings };
+  let saved = false;
   try {
     requireAdmin();
+    for (const [fieldName, file, folder] of imageUploads) {
+      const uploaded = await uploadStoreImage(file, folder);
+      uploadedImages.push({ fieldName, uploaded });
+      nextSettings[fieldName] = uploaded.url;
+    }
     await setDoc(doc(db, "store_settings", "main"), {
       ...nextSettings,
       updatedAt: serverTimestamp()
     }, { merge: true });
+    saved = true;
     settings = nextSettings;
     showToast("Your storefront has been updated.");
   } catch (error) {
     console.error("Could not save Auvne storefront settings.", error);
+    for (const { uploaded } of uploadedImages.filter(() => !saved)) {
+      try {
+        await deleteStoreImage(uploaded.url);
+      } catch (cleanupError) {
+        console.error("Could not clean up an unused Auvne storefront image.", cleanupError);
+      }
+    }
     showToast(error.message || "Could not save your storefront settings.");
+  } finally {
+    saveButton.disabled = false;
+  }
+  if (saved) {
+    let cleanupFailed = false;
+    for (const { fieldName } of uploadedImages) {
+      try {
+        await deleteStoreImage(previousSettings[fieldName]);
+      } catch (error) {
+        console.error(`Could not remove the replaced Auvne ${fieldName} image.`, error);
+        cleanupFailed = true;
+      }
+    }
+    if (cleanupFailed) showToast("Storefront saved, but a previous image could not be removed.");
   }
 });
 
