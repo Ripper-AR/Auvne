@@ -9,7 +9,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(root, "index.html"),
-        admin: resolve(root, "admin.html")
+        "atelier/index": resolve(root, "atelier/index.html")
       }
     }
   }

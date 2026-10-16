@@ -11,8 +11,8 @@
     ],
     "rewrites": [
       {
-        "source": "/admin",
-        "destination": "/admin.html"
+        "source": "/atelier",
+        "destination": "/atelier/index.html"
       }
     ],
     "predeploy": [

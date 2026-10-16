@@ -7,15 +7,15 @@
   <title>Store studio — Auvne</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
-  <script type="module" src="admin.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+Arabic:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles.css">
+  <script type="module" src="../admin.js"></script>
 </head>
 <body class="admin-body">
   <header class="site-header admin-header">
-    <a class="brand" href="index.html">AUVNE<span class="brand-dot">.</span></a>
+    <a class="brand" href="../index.html">AUVNE<span class="brand-dot">.</span></a>
     <nav class="main-nav" id="admin-nav" aria-label="Admin navigation" hidden><a href="#orders">Orders</a><a href="#products">Products</a><a href="#storefront">Storefront</a></nav>
-    <a class="admin-preview-link" href="index.html" target="_blank" rel="noopener noreferrer">View storefront ↗</a>
+    <a class="admin-preview-link" href="../index.html" target="_blank" rel="noopener noreferrer">View storefront ↗</a>
   </header>
   <main class="login-gate" id="login-gate">
     <form class="login-card" id="login-form">
@@ -27,8 +27,38 @@
       <label for="admin-password">Password</label>
       <input id="admin-password" name="password" type="password" autocomplete="current-password" required>
       <button class="button button-dark checkout-button" type="submit">Sign in <span aria-hidden="true">↗</span></button>
+      <button class="login-secondary-button" id="password-reset" type="button">Forgot your password?</button>
       <p class="login-error" id="login-error" role="alert" hidden></p>
-      <p class="field-hint">Create the owner account in Firebase Authentication, then grant it store-admin access using the setup steps in README.</p>
+      <p class="field-hint">Store owner sign-in</p>
+    </form>
+    <section class="login-card mfa-card" id="mfa-enrollment" hidden>
+      <p class="eyebrow">SECURE YOUR SIGN-IN</p>
+      <h1>Set up an authenticator<span class="brand-dot">.</span></h1>
+      <p>Two-step verification is required to access the store studio.</p>
+      <label for="mfa-password">Confirm your password</label>
+      <input id="mfa-password" type="password" autocomplete="current-password">
+      <button class="button button-dark checkout-button" id="prepare-authenticator" type="button">Continue</button>
+      <p class="mfa-instructions" id="mfa-instructions" hidden></p>
+      <div class="mfa-secret-wrap" id="mfa-secret-wrap" hidden>
+        <label for="mfa-secret">Authenticator setup key</label>
+        <code id="mfa-secret"></code>
+        <p class="field-hint">Add this key in your authenticator app. Store it securely; it will only be shown during setup.</p>
+        <label for="mfa-enrollment-code">6-digit authenticator code</label>
+        <input id="mfa-enrollment-code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6">
+        <button class="button button-dark checkout-button" id="verify-authenticator" type="button">Verify and continue</button>
+      </div>
+      <p class="login-error" id="mfa-error" role="alert" hidden></p>
+      <button class="login-secondary-button" id="mfa-cancel" type="button">Back to sign in</button>
+    </section>
+    <form class="login-card mfa-card" id="mfa-challenge" hidden>
+      <p class="eyebrow">TWO-STEP VERIFICATION</p>
+      <h1>Check your authenticator<span class="brand-dot">.</span></h1>
+      <p>Enter the current 6-digit code from your authenticator app.</p>
+      <label for="mfa-signin-code">Authenticator code</label>
+      <input id="mfa-signin-code" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
+      <button class="button button-dark checkout-button" type="submit">Verify</button>
+      <p class="login-error" id="mfa-challenge-error" role="alert" hidden></p>
+      <button class="login-secondary-button" id="mfa-challenge-cancel" type="button">Back to sign in</button>
     </form>
   </main>
   <main class="admin-main" id="admin-main" hidden>
@@ -92,10 +122,13 @@
       <div class="cart-heading"><div><p class="eyebrow">MAKE IT AUVNE</p><h2 id="dialog-title">Add a product</h2></div><button class="icon-button" id="close-dialog" type="button" aria-label="Close editor">×</button></div>
       <input type="hidden" name="id">
       <label for="product-name">Product name</label><input id="product-name" name="name" required maxlength="80">
+      <label for="product-name-ar" lang="ar" dir="rtl">اسم المنتج بالعربية</label><input id="product-name-ar" name="nameAr" lang="ar" dir="rtl" required maxlength="80">
       <label for="product-category">Collection / category</label><input id="product-category" name="category" required maxlength="50" placeholder="Everyday frames">
+      <label for="product-category-ar" lang="ar" dir="rtl">التصنيف بالعربية</label><input id="product-category-ar" name="categoryAr" lang="ar" dir="rtl" required maxlength="50">
       <label for="product-price">Price</label><input id="product-price" name="price" required type="number" min="0" max="1000000" step="0.01">
       <label for="product-image">Product image</label><input id="product-image" name="imageFile" type="file" accept="image/jpeg,image/png,image/webp"><span class="field-hint" id="product-image-hint">Choose a JPEG, PNG, or WebP image (up to 5 MB).</span><img class="upload-preview" id="product-image-preview" alt="Product image preview" hidden>
       <label for="product-description">A little description</label><textarea id="product-description" name="description" rows="3" maxlength="240" required></textarea>
+      <label for="product-description-ar" lang="ar" dir="rtl">وصف المنتج بالعربية</label><textarea id="product-description-ar" name="descriptionAr" lang="ar" dir="rtl" rows="3" maxlength="240" required></textarea>
       <label class="checkbox-label"><input name="featured" type="checkbox"> Feature on the homepage</label>
       <button class="button button-dark checkout-button" type="submit">Save product <span aria-hidden="true">↗</span></button>
     </form>

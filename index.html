@@ -8,7 +8,7 @@
   <title>Auvne — See things differently</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+Arabic:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <script type="module" src="app.js"></script>
 </head>
@@ -21,8 +21,9 @@
       <a href="#story" id="nav-story">Our story</a>
       <a href="#contact" id="nav-contact">Contact</a>
     </nav>
+    <button class="language-toggle" id="language-toggle" type="button" aria-label="Switch language">العربية</button>
     <button class="cart-trigger" id="cart-trigger" type="button" aria-label="Open shopping bag">
-      Bag <span class="cart-count" id="cart-count">0</span>
+      <span id="cart-trigger-label">Bag</span> <span class="cart-count" id="cart-count">0</span>
     </button>
   </header>
 
@@ -52,6 +53,8 @@
       <div class="product-grid" id="product-grid"></div>
     </section>
 
+    <section class="product-detail section-wrap" id="product-detail" hidden></section>
+
     <section class="story" id="story">
       <div class="story-image">
         <img id="story-image" src="https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&w=1100&q=85" alt="A considered collection of eyewear">
@@ -80,18 +83,19 @@
 
   <div class="cart-backdrop" id="cart-backdrop" hidden></div>
   <aside class="cart-drawer" id="cart-drawer" aria-label="Shopping bag" aria-hidden="true">
-    <div class="cart-heading"><div><p class="eyebrow">YOUR SELECTION</p><h2>Your bag <span id="drawer-count">(0)</span></h2></div><button class="icon-button" id="close-cart" type="button" aria-label="Close shopping bag">×</button></div>
+    <div class="cart-heading"><div><p class="eyebrow" id="cart-eyebrow">YOUR SELECTION</p><h2><span id="cart-title">Your bag</span> <span id="drawer-count">(0)</span></h2></div><button class="icon-button" id="close-cart" type="button" aria-label="Close shopping bag">×</button></div>
     <div class="cart-items" id="cart-items"></div>
-    <div class="cart-empty" id="cart-empty"><span>✳</span><p>Your bag is taking a little breather.</p><a href="#collection" id="empty-shop-link">Find your frames ↗</a></div>
+    <div class="cart-empty" id="cart-empty"><span>✳</span><p id="cart-empty-message">Your bag is taking a little breather.</p><a href="#collection" id="empty-shop-link">Find your frames ↗</a></div>
     <div class="cart-bottom" id="cart-bottom" hidden>
-      <div class="cart-total"><span>Subtotal</span><strong id="cart-total"></strong></div>
+      <div class="cart-total"><span id="subtotal-label">Subtotal</span><strong id="cart-total"></strong></div>
       <p class="checkout-note" id="checkout-note">Your order will open in WhatsApp so we can help you personally.</p>
       <form id="checkout-form" class="checkout-form">
-        <label for="customer-name">Your name</label><input id="customer-name" name="name" autocomplete="name" required placeholder="What should we call you?">
-        <label for="customer-phone">Your phone number</label><input id="customer-phone" name="phone" type="tel" autocomplete="tel" required placeholder="So we can get back to you">
+        <label for="customer-name" id="customer-name-label">Your name</label><input id="customer-name" name="name" autocomplete="name" required placeholder="What should we call you?">
+        <label for="customer-phone" id="customer-phone-label">Your phone number</label><input id="customer-phone" name="phone" type="tel" autocomplete="tel" required placeholder="So we can get back to you">
         <button class="button button-dark checkout-button" id="checkout-button-label" type="submit"><span>Continue to WhatsApp</span><span aria-hidden="true">↗</span></button>
       </form>
     </div>
+    <p class="checkout-status" id="checkout-status" role="status" hidden></p>
   </aside>
 </body>
 </html>

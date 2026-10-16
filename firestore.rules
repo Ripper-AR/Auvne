@@ -6,8 +6,14 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isStoreAdmin() {
+    function hasTotpMfa() {
       return signedIn()
+        && request.auth.token.email_verified == true
+        && request.auth.token.firebase.sign_in_second_factor == 'totp';
+    }
+
+    function isStoreAdmin() {
+      return hasTotpMfa()
         && exists(/databases/$(database)/documents/store_admins/$(request.auth.uid))
         && get(/databases/$(database)/documents/store_admins/$(request.auth.uid)).data.enabled == true;
     }
@@ -18,14 +24,15 @@ service cloud.firestore {
 
     function validOrderLine(item) {
       return item is map
-        && item.keys().hasOnly(['id', 'name', 'priceCents', 'quantity'])
-        && item.keys().hasAll(['id', 'name', 'priceCents', 'quantity'])
+        && item.keys().hasOnly(['id', 'name', 'nameAr', 'priceCents', 'quantity'])
+        && item.keys().hasAll(['id', 'name', 'nameAr', 'priceCents', 'quantity'])
         && item.id is string
         && item.id.size() > 0
         && item.id.size() <= 128
         && exists(productPath(item.id))
         && get(productPath(item.id)).data.active == true
         && item.name == get(productPath(item.id)).data.name
+        && item.nameAr == get(productPath(item.id)).data.get('nameAr', get(productPath(item.id)).data.name)
         && item.priceCents is int
         && item.priceCents == math.round(get(productPath(item.id)).data.price * 100)
         && item.quantity is int
@@ -79,21 +86,29 @@ service cloud.firestore {
       allow read: if resource.data.active == true || isStoreAdmin();
       allow create, update: if isStoreAdmin()
         && request.resource.data.keys().hasOnly([
-          'name', 'category', 'price', 'image', 'description',
+          'name', 'nameAr', 'category', 'categoryAr', 'price', 'image', 'description', 'descriptionAr',
           'featured', 'active', 'createdAt', 'updatedAt'
         ])
         && request.resource.data.name is string
         && request.resource.data.name.size() > 0
         && request.resource.data.name.size() <= 80
+        && request.resource.data.nameAr is string
+        && request.resource.data.nameAr.size() > 0
+        && request.resource.data.nameAr.size() <= 80
         && request.resource.data.category is string
         && request.resource.data.category.size() > 0
         && request.resource.data.category.size() <= 50
+        && request.resource.data.categoryAr is string
+        && request.resource.data.categoryAr.size() > 0
+        && request.resource.data.categoryAr.size() <= 50
         && request.resource.data.price is number
         && request.resource.data.price >= 0
         && request.resource.data.price <= 1000000
         && request.resource.data.image is string
         && request.resource.data.description is string
         && request.resource.data.description.size() <= 240
+        && request.resource.data.descriptionAr is string
+        && request.resource.data.descriptionAr.size() <= 240
         && request.resource.data.featured is bool
         && request.resource.data.active is bool;
       allow delete: if isStoreAdmin();
@@ -106,6 +121,15 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly([
           'announcement', 'navShop', 'navStory', 'navContact',
           'eyebrow', 'title', 'description', 'heroCta', 'heroNote',
+          'announcementAr', 'navShopAr', 'navStoryAr', 'navContactAr',
+          'eyebrowAr', 'titleAr', 'descriptionAr', 'heroCtaAr', 'heroNoteAr',
+          'heroCaptionAr', 'heroRoundelAr', 'collectionEyebrowAr',
+          'collectionTitleAr', 'collectionIntroAr', 'collectionLabelAr',
+          'featuredBadgeAr', 'storyEyebrowAr', 'storyTitleAr',
+          'storyDescriptionAr', 'storyStampAr', 'storyCtaAr',
+          'promiseOneAr', 'promiseTwoAr', 'promiseThreeAr',
+          'footerWhatsappLabelAr', 'footerMessageAr', 'checkoutNoteAr',
+          'checkoutButtonAr',
           'heroCaption', 'heroRoundel', 'heroImage', 'collectionEyebrow',
           'collectionTitle', 'collectionIntro', 'collectionLabel',
           'featuredBadge', 'storyEyebrow', 'storyTitle',
