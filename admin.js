@@ -1,11 +1,6 @@
 import {
-  EmailAuthProvider,
-  TotpMultiFactorGenerator,
-  getIdTokenResult,
-  getMultiFactorResolver,
-  multiFactor,
   onAuthStateChanged,
-  reauthenticateWithCredential,
+  reload,
   sendEmailVerification,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
@@ -118,19 +113,16 @@ const productDialog = document.getElementById("product-dialog");
 const productForm = document.getElementById("product-form");
 const loginForm = document.getElementById("login-form");
 const loginError = document.getElementById("login-error");
-const mfaEnrollment = document.getElementById("mfa-enrollment");
-const mfaChallenge = document.getElementById("mfa-challenge");
-const mfaError = document.getElementById("mfa-error");
-const mfaChallengeError = document.getElementById("mfa-challenge-error");
+const emailVerification = document.getElementById("email-verification");
+const verificationInstructions = document.getElementById("verification-instructions");
+const verificationError = document.getElementById("verification-error");
 const adminMain = document.getElementById("admin-main");
 const signInButton = loginForm.querySelector('button[type="submit"]');
 const productImageFile = productForm.elements.imageFile;
 const productImagePreview = document.getElementById("product-image-preview");
 let productPreviewUrl = "";
 let currentProductImage = "";
-let pendingTotpSecret = null;
-let pendingMfaResolver = null;
-let pendingMfaHint = null;
+let verificationResendTimeout;
 addArabicSettingsFields();
 
 function formatPrice(price) {
@@ -199,22 +191,13 @@ function resetAdminPage() {
   document.getElementById("admin-nav").hidden = true;
   document.getElementById("login-gate").hidden = false;
   loginForm.hidden = false;
-  mfaEnrollment.hidden = true;
-  mfaChallenge.hidden = true;
+  emailVerification.hidden = true;
   loginForm.reset();
-  document.getElementById("mfa-password").hidden = false;
-  document.getElementById("mfa-password").value = "";
-  document.getElementById("prepare-authenticator").hidden = false;
-  document.getElementById("mfa-enrollment-code").value = "";
-  document.getElementById("mfa-signin-code").value = "";
-  document.getElementById("mfa-secret-wrap").hidden = true;
-  document.getElementById("mfa-secret").textContent = "";
-  document.getElementById("mfa-instructions").hidden = true;
-  mfaError.hidden = true;
-  mfaChallengeError.hidden = true;
-  pendingTotpSecret = null;
-  pendingMfaResolver = null;
-  pendingMfaHint = null;
+  verificationError.hidden = true;
+  verificationInstructions.textContent = "";
+  clearTimeout(verificationResendTimeout);
+  verificationResendTimeout = null;
+  document.getElementById("resend-verification").hidden = true;
 }
 
 function showAuthError(element, message) {
@@ -231,49 +214,35 @@ async function requireStoreAdmin(user) {
 
 async function enterAdmin(user) {
   document.getElementById("admin-password").value = "";
-  const hasTotp = multiFactor(user).enrolledFactors.some(
-    factor => factor.factorId === TotpMultiFactorGenerator.FACTOR_ID
-  );
-  const tokenResult = await getIdTokenResult(user, true);
-  const signedInWithTotp = tokenResult.claims.firebase?.sign_in_second_factor === TotpMultiFactorGenerator.FACTOR_ID;
-  if (!user.emailVerified || !hasTotp) {
-    if (!(await requireStoreAdmin(user))) {
-      resetAdminPage();
-      showLoginError("Sign-in failed. Check your account details and try again.");
-      return;
-    }
-    loginForm.hidden = true;
-    mfaChallenge.hidden = true;
-    mfaEnrollment.hidden = false;
-    if (!user.emailVerified) {
-      const instructions = document.getElementById("mfa-instructions");
-      instructions.textContent = "Verify your email before setting up two-step verification. A verification email has been sent.";
-      instructions.hidden = false;
-      document.getElementById("mfa-password").hidden = true;
-      document.getElementById("prepare-authenticator").hidden = true;
-      try {
-        await sendEmailVerification(user);
-      } catch (error) {
-        console.error("Could not send the Auvne admin email verification.", error);
-        instructions.textContent = "Verify your email address, then sign in again to continue.";
-      }
-    }
-    return;
-  }
-  if (!signedInWithTotp) {
-    await signOut(auth);
-    showLoginError("Sign in again and verify your authenticator to continue.");
-    return;
-  }
   if (!(await requireStoreAdmin(user))) {
     resetAdminPage();
     showLoginError("Sign-in failed. Check your account details and try again.");
     return;
   }
+  if (!user.emailVerified) {
+    loginForm.hidden = true;
+    emailVerification.hidden = false;
+    const emailLabel = user.email ? ` to ${user.email}` : "";
+    verificationInstructions.textContent = `Verify your email before accessing the store. Check your inbox and spam folder${emailLabel}.`;
+    const resendButton = document.getElementById("resend-verification");
+    resendButton.hidden = false;
+    try {
+      await sendEmailVerification(user);
+      verificationInstructions.textContent = `Firebase accepted a verification email request${emailLabel}. Check your inbox and spam folder.`;
+      resendButton.disabled = true;
+      verificationResendTimeout = window.setTimeout(() => {
+        resendButton.disabled = false;
+        verificationResendTimeout = null;
+      }, 30000);
+    } catch (error) {
+      console.error("Could not send the Auvne admin email verification.", error);
+      verificationInstructions.textContent = `Could not request a verification email${emailLabel}. Check the address and try again shortly.`;
+    }
+    return;
+  }
   adminUser = user;
   loginForm.hidden = true;
-  mfaEnrollment.hidden = true;
-  mfaChallenge.hidden = true;
+  emailVerification.hidden = true;
   document.getElementById("login-gate").hidden = true;
   adminMain.hidden = false;
   document.getElementById("admin-nav").hidden = false;
@@ -681,106 +650,60 @@ document.getElementById("password-reset").addEventListener("click", async () => 
   showAuthError(loginError, "If an account matches that email, a password reset link has been sent.");
 });
 
-document.getElementById("prepare-authenticator").addEventListener("click", async () => {
+document.getElementById("resend-verification").addEventListener("click", async event => {
+  const button = event.currentTarget;
   const user = auth?.currentUser;
-  const password = document.getElementById("mfa-password").value;
-  const instructions = document.getElementById("mfa-instructions");
-  mfaError.hidden = true;
-  if (!user?.email || !password) {
-    showAuthError(mfaError, "Enter your password to continue.");
-    return;
-  }
-  const button = document.getElementById("prepare-authenticator");
+  const instructions = verificationInstructions;
+  if (!user || user.emailVerified || button.disabled) return;
   button.disabled = true;
   try {
-    const credential = EmailAuthProvider.credential(user.email, password);
-    await reauthenticateWithCredential(user, credential);
+    await sendEmailVerification(user);
+    const emailLabel = user.email ? ` to ${user.email}` : "";
+    instructions.textContent = `Firebase accepted a verification email request${emailLabel}. Check your inbox and spam folder.`;
+    clearTimeout(verificationResendTimeout);
+    verificationResendTimeout = window.setTimeout(() => {
+      button.disabled = false;
+      verificationResendTimeout = null;
+    }, 30000);
+  } catch (error) {
+    console.error("Could not resend the Auvne admin email verification.", error);
+    instructions.textContent = "Could not request a verification email. Wait a moment, then try again.";
+    button.disabled = false;
+  }
+});
+
+document.getElementById("check-email-verified").addEventListener("click", async event => {
+  const user = auth?.currentUser;
+  const button = event.currentTarget;
+  verificationError.hidden = true;
+  if (!user) {
+    resetAdminPage();
+    showLoginError("Your sign-in expired. Please sign in again.");
+    return;
+  }
+  button.disabled = true;
+  try {
+    await reload(user);
     if (!user.emailVerified) {
-      await sendEmailVerification(user);
-      instructions.textContent = "Verify your email using the link we just sent, then sign in again.";
-      instructions.hidden = false;
+      showAuthError(verificationError, "Your email is not verified yet. Open the verification link, then try again.");
       return;
     }
-    const session = await multiFactor(user).getSession();
-    pendingTotpSecret = await TotpMultiFactorGenerator.generateSecret(session);
-    document.getElementById("mfa-secret").textContent = pendingTotpSecret.secretKey;
-    document.getElementById("mfa-secret-wrap").hidden = false;
-    document.getElementById("mfa-password").hidden = true;
-    button.hidden = true;
-    instructions.textContent = "Add this account to your authenticator app, then enter its current code.";
-    instructions.hidden = false;
+    await user.getIdToken(true);
+    await enterAdmin(user);
   } catch (error) {
-    console.error("Could not prepare Auvne admin authenticator enrollment.", error);
-    showAuthError(mfaError, "Could not set up two-step verification. Check your password and try again.");
+    console.error("Could not verify Auvne admin email status.", error);
+    showAuthError(verificationError, "Could not confirm your email yet. Please try again.");
   } finally {
     button.disabled = false;
   }
 });
 
-document.getElementById("verify-authenticator").addEventListener("click", async () => {
-  const user = auth?.currentUser;
-  const code = document.getElementById("mfa-enrollment-code").value.trim();
-  mfaError.hidden = true;
-  if (!user || !pendingTotpSecret || !/^\d{6}$/.test(code)) {
-    showAuthError(mfaError, "Enter the 6-digit code from your authenticator app.");
-    return;
-  }
-  const button = document.getElementById("verify-authenticator");
-  button.disabled = true;
-  try {
-    const assertion = TotpMultiFactorGenerator.assertionForEnrollment(pendingTotpSecret, code);
-    await multiFactor(user).enroll(assertion, "Authenticator app");
-    pendingTotpSecret = null;
-    await signOut(auth);
-    showLoginError("Authenticator set up. Sign in again and verify your new code to continue.");
-  } catch (error) {
-    console.error("Could not verify Auvne admin authenticator enrollment.", error);
-    showAuthError(mfaError, "That code could not be verified. Check the code and try again.");
-  } finally {
-    button.disabled = false;
-  }
-});
-
-document.getElementById("mfa-cancel").addEventListener("click", async () => {
+document.getElementById("verification-sign-out").addEventListener("click", async () => {
   try {
     await signOut(auth);
   } catch (error) {
-    console.error("Could not cancel Auvne admin authenticator setup.", error);
-    showAuthError(mfaError, "Could not return to sign-in. Please try again.");
-  }
-});
-
-document.getElementById("mfa-challenge-cancel").addEventListener("click", () => {
-  pendingMfaResolver = null;
-  pendingMfaHint = null;
-  mfaChallenge.hidden = true;
-  loginForm.hidden = false;
-});
-
-mfaChallenge.addEventListener("submit", async event => {
-  event.preventDefault();
-  mfaChallengeError.hidden = true;
-  if (!pendingMfaResolver || !pendingMfaHint) {
-    showAuthError(mfaChallengeError, "Sign in again to continue.");
-    return;
-  }
-  const code = new FormData(mfaChallenge).get("code");
-  if (typeof code !== "string" || !/^\d{6}$/.test(code.trim())) {
-    showAuthError(mfaChallengeError, "Enter the 6-digit code from your authenticator app.");
-    return;
-  }
-  const button = mfaChallenge.querySelector('button[type="submit"]');
-  button.disabled = true;
-  try {
-    const assertion = TotpMultiFactorGenerator.assertionForSignIn(pendingMfaHint.uid, code.trim());
-    await pendingMfaResolver.resolveSignIn(assertion);
-    pendingMfaResolver = null;
-    pendingMfaHint = null;
-  } catch (error) {
-    console.error("Auvne admin second-factor verification failed.", error);
-    showAuthError(mfaChallengeError, "That code could not be verified. Check the code and try again.");
-  } finally {
-    button.disabled = false;
+    console.error("Could not sign out from the Auvne email verification screen.", error);
+    showAuthError(verificationError, "Could not return to sign-in. Please try again.");
   }
 });
 
@@ -798,24 +721,8 @@ loginForm.addEventListener("submit", async event => {
     await signInWithEmailAndPassword(auth, String(form.get("email")).trim(), String(form.get("password")));
   } catch (error) {
     console.error("Auvne admin sign-in failed.", error);
-    if (error.code === "auth/multi-factor-auth-required") {
-      pendingMfaResolver = getMultiFactorResolver(auth, error);
-      pendingMfaHint = pendingMfaResolver.hints.find(
-        hint => hint.factorId === TotpMultiFactorGenerator.FACTOR_ID
-      );
-      if (pendingMfaHint) {
-        document.getElementById("admin-password").value = "";
-        loginForm.hidden = true;
-        mfaChallenge.hidden = false;
-      } else {
-        pendingMfaResolver = null;
-        loginForm.hidden = false;
-        showLoginError("Two-step verification is unavailable. Contact the store owner.");
-      }
-    } else {
-      loginError.hidden = true;
-      showLoginError("Sign-in failed. Check your email and password and try again.");
-    }
+    loginError.hidden = true;
+    showLoginError("Sign-in failed. Check your email and password and try again.");
   } finally {
     signInButton.disabled = false;
   }

@@ -25,7 +25,7 @@ with check (
   and (select auth.jwt() ->> 'iss') = 'https://securetoken.google.com/auvne-eba39'
   and (select auth.jwt() ->> 'aud') = 'auvne-eba39'
   and (select auth.jwt() ->> 'sub') = 'TAA5c29Ir9exrNMeeQlkYRlxZSp1'
-  and (select auth.jwt() -> 'firebase' ->> 'sign_in_second_factor') = 'totp'
+  and (select auth.jwt() ->> 'email_verified') = 'true'
 );
 
 drop policy if exists "Auvne owner removes images" on storage.objects;
@@ -40,5 +40,5 @@ using (
   and (select auth.jwt() ->> 'iss') = 'https://securetoken.google.com/auvne-eba39'
   and (select auth.jwt() ->> 'aud') = 'auvne-eba39'
   and (select auth.jwt() ->> 'sub') = 'TAA5c29Ir9exrNMeeQlkYRlxZSp1'
-  and (select auth.jwt() -> 'firebase' ->> 'sign_in_second_factor') = 'totp'
+  and (select auth.jwt() ->> 'email_verified') = 'true'
 );

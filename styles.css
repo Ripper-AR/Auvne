@@ -186,10 +186,7 @@ button { color: inherit; }
 .login-card .field-hint { margin-top: 4px; }
 .login-card [hidden] { display: none; }
 .login-secondary-button { align-self: flex-start; padding: 4px 0; border: 0; background: none; color: var(--muted); font-size: 10px; text-decoration: underline; cursor: pointer; }
-.mfa-card { width: 100%; }
-.mfa-instructions { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.7; }
-.mfa-secret-wrap { display: flex; flex-direction: column; gap: 11px; }
-.mfa-secret-wrap code { padding: 12px; overflow-wrap: anywhere; background: #f2f0e9; font-size: 13px; letter-spacing: .08em; text-align: center; user-select: all; }
+.verification-instructions { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.7; }
 .login-error { padding: 10px; background: #f5ede7; color: #75452e !important; }
 .login-error[hidden] { display: none; }
 .admin-product-list { display: flex; flex-direction: column; }

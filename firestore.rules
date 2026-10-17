@@ -6,14 +6,13 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function hasTotpMfa() {
+    function isVerifiedUser() {
       return signedIn()
-        && request.auth.token.email_verified == true
-        && request.auth.token.firebase.sign_in_second_factor == 'totp';
+        && request.auth.token.email_verified == true;
     }
 
     function isStoreAdmin() {
-      return hasTotpMfa()
+      return isVerifiedUser()
         && exists(/databases/$(database)/documents/store_admins/$(request.auth.uid))
         && get(/databases/$(database)/documents/store_admins/$(request.auth.uid)).data.enabled == true;
     }
