@@ -21,10 +21,10 @@ to anon, authenticated
 with check (
   bucket_id = 'auvne-images'
   and (storage.foldername(name))[1] = 'admin'
-  and (storage.foldername(name))[2] = 'TAA5c29Ir9exrNMeeQlkYRlxZSp1'
+  and (storage.foldername(name))[2] = 'REPLACE_WITH_FIREBASE_ADMIN_UID'
   and (select auth.jwt() ->> 'iss') = 'https://securetoken.google.com/auvne-eba39'
   and (select auth.jwt() ->> 'aud') = 'auvne-eba39'
-  and (select auth.jwt() ->> 'sub') = 'TAA5c29Ir9exrNMeeQlkYRlxZSp1'
+  and (select auth.jwt() ->> 'sub') = 'REPLACE_WITH_FIREBASE_ADMIN_UID'
   and (select auth.jwt() ->> 'email_verified') = 'true'
 );
 
@@ -36,9 +36,9 @@ to anon, authenticated
 using (
   bucket_id = 'auvne-images'
   and (storage.foldername(name))[1] = 'admin'
-  and (storage.foldername(name))[2] = 'TAA5c29Ir9exrNMeeQlkYRlxZSp1'
+  and (storage.foldername(name))[2] = 'REPLACE_WITH_FIREBASE_ADMIN_UID'
   and (select auth.jwt() ->> 'iss') = 'https://securetoken.google.com/auvne-eba39'
   and (select auth.jwt() ->> 'aud') = 'auvne-eba39'
-  and (select auth.jwt() ->> 'sub') = 'TAA5c29Ir9exrNMeeQlkYRlxZSp1'
+  and (select auth.jwt() ->> 'sub') = 'REPLACE_WITH_FIREBASE_ADMIN_UID'
   and (select auth.jwt() ->> 'email_verified') = 'true'
 );

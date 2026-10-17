@@ -574,6 +574,7 @@ productForm.addEventListener("submit", async event => {
   submitButton.disabled = true;
   const uploadedImages = [];
   let saved = false;
+  let saveStage = "photo upload";
   const oldImages = normalizeProductImages(products.find(existing => existing.id === id) || {});
   try {
     requireAdmin();
@@ -591,12 +592,13 @@ productForm.addEventListener("submit", async event => {
       const existingProduct = products.find(existing => existing.id === id);
       product.createdAt = existingProduct?.createdAt || serverTimestamp();
     }
+    saveStage = "Firestore write";
     await setDoc(productRef, product);
     saved = true;
     productDialog.close();
     showToast(id ? "Product updated on your storefront." : "Your new product is on the storefront.");
   } catch (error) {
-    console.error("Could not save Auvne product.", error);
+    console.error(`Could not save Auvne product during ${saveStage}.`, error);
     for (const uploaded of uploadedImages.filter(() => !saved)) {
       try {
         await deleteStoreImage(uploaded.url);
@@ -604,7 +606,9 @@ productForm.addEventListener("submit", async event => {
         console.error("Could not clean up an unused Auvne product image.", cleanupError);
       }
     }
-    showToast("Could not save that product. Please try again.");
+    showToast(saveStage === "photo upload"
+      ? "Could not upload a product photo. Check Supabase setup and the Firebase owner UID policy."
+      : "Could not save that product to the database. Check Firebase admin access and Firestore rules.");
   } finally {
     submitButton.disabled = false;
   }
