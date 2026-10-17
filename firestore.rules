@@ -21,6 +21,41 @@ service cloud.firestore {
       return /databases/$(database)/documents/products/$(productId);
     }
 
+    function validProductImage(image) {
+      return image is map
+        && image.keys().hasOnly(['url', 'color', 'position'])
+        && image.keys().hasAll(['url', 'color', 'position'])
+        && image.url is string
+        && image.url.size() > 0
+        && image.url.size() <= 2048
+        && image.color is string
+        && image.color.size() <= 40
+        && image.position is string
+        && image.position.size() <= 40;
+    }
+
+    function validProductImageAt(images, index) {
+      return images.size() <= index || validProductImage(images[index]);
+    }
+
+    function validProductImages(images) {
+      return images is list
+        && images.size() >= 1
+        && images.size() <= 12
+        && validProductImageAt(images, 0)
+        && validProductImageAt(images, 1)
+        && validProductImageAt(images, 2)
+        && validProductImageAt(images, 3)
+        && validProductImageAt(images, 4)
+        && validProductImageAt(images, 5)
+        && validProductImageAt(images, 6)
+        && validProductImageAt(images, 7)
+        && validProductImageAt(images, 8)
+        && validProductImageAt(images, 9)
+        && validProductImageAt(images, 10)
+        && validProductImageAt(images, 11);
+    }
+
     function validOrderLine(item) {
       return item is map
         && item.keys().hasOnly(['id', 'name', 'nameAr', 'priceCents', 'quantity'])
@@ -85,7 +120,7 @@ service cloud.firestore {
       allow read: if resource.data.active == true || isStoreAdmin();
       allow create, update: if isStoreAdmin()
         && request.resource.data.keys().hasOnly([
-          'name', 'nameAr', 'category', 'categoryAr', 'price', 'image', 'description', 'descriptionAr',
+          'name', 'nameAr', 'category', 'categoryAr', 'price', 'image', 'images', 'description', 'descriptionAr',
           'featured', 'active', 'createdAt', 'updatedAt'
         ])
         && request.resource.data.name is string
@@ -104,6 +139,8 @@ service cloud.firestore {
         && request.resource.data.price >= 0
         && request.resource.data.price <= 1000000
         && request.resource.data.image is string
+        && validProductImages(request.resource.data.images)
+        && request.resource.data.image == request.resource.data.images[0].url
         && request.resource.data.description is string
         && request.resource.data.description.size() <= 240
         && request.resource.data.descriptionAr is string

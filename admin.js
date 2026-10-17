@@ -118,10 +118,9 @@ const verificationInstructions = document.getElementById("verification-instructi
 const verificationError = document.getElementById("verification-error");
 const adminMain = document.getElementById("admin-main");
 const signInButton = loginForm.querySelector('button[type="submit"]');
-const productImageFile = productForm.elements.imageFile;
-const productImagePreview = document.getElementById("product-image-preview");
-let productPreviewUrl = "";
-let currentProductImage = "";
+const productImageFiles = productForm.elements.imageFiles;
+const productImageList = document.getElementById("product-image-list");
+let productImages = [];
 let verificationResendTimeout;
 addArabicSettingsFields();
 
@@ -426,15 +425,67 @@ function fillSettingsForm() {
   }
 }
 
-function showProductImagePreview(url) {
-  productImagePreview.hidden = !url;
-  if (url) productImagePreview.src = url;
-  else productImagePreview.removeAttribute("src");
+function normalizeProductImages(product) {
+  const images = Array.isArray(product.images) ? product.images : [];
+  const normalized = images.map(image => typeof image === "string"
+    ? { url: image, color: "", position: "" }
+    : {
+      url: image?.url || image?.image || "",
+      color: image?.color || image?.name || "",
+      position: image?.position || image?.view || ""
+    }).filter(image => image.url);
+  if (!normalized.length && product.image) normalized.push({ url: product.image, color: "", position: "" });
+  return normalized;
+}
+
+function renderProductImageList() {
+  productImageList.replaceChildren();
+  productImages.forEach((image, index) => {
+    const row = makeElement("div", "product-image-entry");
+    const preview = document.createElement("img");
+    preview.className = "product-image-entry-preview";
+    preview.alt = "";
+    preview.src = image.previewUrl || image.url;
+
+    const fields = makeElement("div", "product-image-entry-fields");
+    const colorLabel = makeElement("label", "", "Color / variant");
+    const colorInput = makeElement("input");
+    colorInput.type = "text";
+    colorInput.maxLength = 40;
+    colorInput.value = image.color;
+    colorInput.placeholder = "e.g. Tortoise";
+    colorInput.setAttribute("aria-label", `Photo ${index + 1} color or variant`);
+    colorInput.addEventListener("input", () => { image.color = colorInput.value.trim(); });
+    colorLabel.append(colorInput);
+
+    const positionLabel = makeElement("label", "", "View / angle");
+    const positionInput = makeElement("input");
+    positionInput.type = "text";
+    positionInput.maxLength = 40;
+    positionInput.value = image.position;
+    positionInput.placeholder = "e.g. Side view";
+    positionInput.setAttribute("aria-label", `Photo ${index + 1} view or angle`);
+    positionInput.addEventListener("input", () => { image.position = positionInput.value.trim(); });
+    positionLabel.append(positionInput);
+    fields.append(colorLabel, positionLabel);
+
+    const remove = makeElement("button", "product-image-remove", "Remove");
+    remove.type = "button";
+    remove.setAttribute("aria-label", `Remove photo ${index + 1}`);
+    remove.addEventListener("click", () => {
+      if (image.previewUrl) URL.revokeObjectURL(image.previewUrl);
+      productImages = productImages.filter(candidate => candidate !== image);
+      renderProductImageList();
+    });
+    row.append(preview, fields, remove);
+    productImageList.append(row);
+  });
 }
 
 function openProductEditor(product) {
-  if (productPreviewUrl) URL.revokeObjectURL(productPreviewUrl);
-  productPreviewUrl = "";
+  productImages.forEach(image => {
+    if (image.previewUrl) URL.revokeObjectURL(image.previewUrl);
+  });
   productForm.reset();
   document.getElementById("dialog-title").textContent = product ? "Edit product" : "Add a product";
   productForm.elements.id.value = product ? product.id : "";
@@ -443,27 +494,34 @@ function openProductEditor(product) {
   productForm.elements.category.value = product ? product.category : "";
   productForm.elements.categoryAr.value = product ? product.categoryAr || product.category : "";
   productForm.elements.price.value = product ? product.price : "";
-  currentProductImage = product ? product.image : "";
+  productImages = product ? normalizeProductImages(product) : [];
   document.getElementById("product-image-hint").textContent = product
-    ? "Choose a new image to replace the current one, or leave empty to keep it."
-    : "Choose a JPEG, PNG, or WebP image (up to 5 MB).";
-  showProductImagePreview(currentProductImage);
+    ? "Existing photos are kept. Add more views or colors, or remove photos you no longer need."
+    : "Add up to 12 photos. Include different colors or viewing angles; each JPEG, PNG, or WebP must be 5 MB or smaller.";
+  renderProductImageList();
   productForm.elements.description.value = product ? product.description : "";
   productForm.elements.descriptionAr.value = product ? product.descriptionAr || product.description : "";
   productForm.elements.featured.checked = product ? Boolean(product.featured) : false;
   productDialog.showModal();
 }
 
-productImageFile.addEventListener("change", () => {
-  if (productPreviewUrl) URL.revokeObjectURL(productPreviewUrl);
-  productPreviewUrl = "";
-  const file = productImageFile.files[0];
-  if (file) {
-    productPreviewUrl = URL.createObjectURL(file);
-    showProductImagePreview(productPreviewUrl);
-  } else {
-    showProductImagePreview(currentProductImage);
+productImageFiles.addEventListener("change", () => {
+  const files = [...productImageFiles.files];
+  productImageFiles.value = "";
+  if (productImages.length + files.length > 12) {
+    showToast("A product can have up to 12 photos.");
+    return;
   }
+  for (const file of files) {
+    productImages.push({
+      file,
+      previewUrl: URL.createObjectURL(file),
+      url: "",
+      color: "",
+      position: ""
+    });
+  }
+  renderProductImageList();
 });
 
 document.getElementById("add-product").addEventListener("click", () => openProductEditor(null));
@@ -476,14 +534,14 @@ productForm.addEventListener("submit", async event => {
   event.preventDefault();
   const form = new FormData(productForm);
   const id = String(form.get("id") || "");
-  const imageFile = productImageFile.files[0];
   const product = {
     name: String(form.get("name")).trim(),
     nameAr: String(form.get("nameAr")).trim(),
     category: String(form.get("category")).trim(),
     categoryAr: String(form.get("categoryAr")).trim(),
     price: Number(form.get("price")),
-    image: currentProductImage,
+    image: productImages[0]?.url || "",
+    images: [],
     description: String(form.get("description")).trim(),
     descriptionAr: String(form.get("descriptionAr")).trim(),
     featured: form.get("featured") === "on",
@@ -496,21 +554,38 @@ productForm.addEventListener("submit", async event => {
     return;
   }
   if (!product.name || !product.nameAr || !product.category || !product.categoryAr ||
-    !product.description || !product.descriptionAr || (!imageFile && !product.image)) {
+    !product.description || !product.descriptionAr || productImages.length === 0) {
     showToast("Please check the product details and try again.");
+    return;
+  }
+  if (productImages.length > 12) {
+    showToast("A product can have up to 12 photos.");
+    return;
+  }
+  if (productImages.some(image => !image.color || !image.position)) {
+    showToast("Add a color and view/angle label for each product photo.");
+    return;
+  }
+  if (productImages.some(image => image.file && image.file.size > 5 * 1024 * 1024)) {
+    showToast("Each product photo must be 5 MB or smaller.");
     return;
   }
   const submitButton = productForm.querySelector('button[type="submit"]');
   submitButton.disabled = true;
-  let uploadedImage = null;
+  const uploadedImages = [];
   let saved = false;
-  const previousImage = currentProductImage;
+  const oldImages = normalizeProductImages(products.find(existing => existing.id === id) || {});
   try {
     requireAdmin();
-    if (imageFile) {
-      uploadedImage = await uploadStoreImage(imageFile, "products");
-      product.image = uploadedImage.url;
+    for (const image of productImages) {
+      if (image.file) {
+        const uploaded = await uploadStoreImage(image.file, "products");
+        uploadedImages.push(uploaded);
+        image.url = uploaded.url;
+      }
     }
+    product.images = productImages.map(({ url, color, position }) => ({ url, color, position }));
+    product.image = product.images[0].url;
     const productRef = doc(db, "products", id || crypto.randomUUID());
     if (id) {
       const existingProduct = products.find(existing => existing.id === id);
@@ -518,14 +593,13 @@ productForm.addEventListener("submit", async event => {
     }
     await setDoc(productRef, product);
     saved = true;
-    currentProductImage = product.image;
     productDialog.close();
     showToast(id ? "Product updated on your storefront." : "Your new product is on the storefront.");
   } catch (error) {
     console.error("Could not save Auvne product.", error);
-    if (uploadedImage && !saved) {
+    for (const uploaded of uploadedImages.filter(() => !saved)) {
       try {
-        await deleteStoreImage(uploadedImage.url);
+        await deleteStoreImage(uploaded.url);
       } catch (cleanupError) {
         console.error("Could not clean up an unused Auvne product image.", cleanupError);
       }
@@ -534,13 +608,19 @@ productForm.addEventListener("submit", async event => {
   } finally {
     submitButton.disabled = false;
   }
-  if (saved && uploadedImage && previousImage && previousImage !== uploadedImage.url) {
-    try {
-      await deleteStoreImage(previousImage);
-    } catch (error) {
-      console.error("Could not remove the replaced Auvne product image.", error);
-      showToast("Product saved, but the previous image could not be removed.");
+  if (saved) {
+    const keptImageUrls = new Set(product.images.map(image => image.url));
+    let cleanupFailed = false;
+    for (const image of oldImages) {
+      if (keptImageUrls.has(image.url)) continue;
+      try {
+        await deleteStoreImage(image.url);
+      } catch (error) {
+        console.error("Could not remove an unused Auvne product image.", error);
+        cleanupFailed = true;
+      }
     }
+    if (cleanupFailed) showToast("Product saved, but a previous image could not be removed.");
   }
 });
 

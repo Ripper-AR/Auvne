@@ -26,7 +26,9 @@ Run `firebase deploy --only firestore:rules,hosting` to deploy the security rule
 
 The storefront supports English and Arabic, remembers the customer's language choice, and uses right-to-left layout for Arabic. The admin studio provides Arabic fields for storefront copy and each product; older records fall back to their English text until Arabic is added.
 
-Product cards link to a detail page. Product documents can optionally include a `colors` or `variants` array with color labels and alternate `image` URLs, plus a numeric `rating` (0–5) and `reviewCount`; the detail page displays these when provided and does not invent ratings for products without rating data.
+Product cards link to a detail page. The detail page displays a numeric `rating` (0–5) and `reviewCount` when present and does not invent ratings for products without rating data. Existing `colors` or `variants` arrays with alternate image URLs remain supported.
+
+Each product can have up to 12 photos. In the studio, add multiple JPEG, PNG, or WebP photos (5 MB max each), label each photo with its color/variant and view/angle, and save. The product page shows color filters and photo thumbnails; the first photo remains the collection-card image. Product documents store these in an `images` array of `{ url, color, position }` objects. Older products with only `image` continue to display and can be edited to add more photos.
 
 WhatsApp checkout saves the order in Firestore first, then opens a prefilled message to the shop's WhatsApp number. The customer must tap **Send** in WhatsApp; the website cannot send messages automatically. If WhatsApp does not open, the saved order remains visible in the admin studio and the customer gets a link to retry. Set or update the shop number in the admin studio using an international number (for example, `+20 10...` for Egypt). The storefront has a fallback to the shop number configured for Auvne.
 
@@ -37,7 +39,7 @@ Images are uploaded directly from the admin studio to the public `auvne-images` 
 1. In Supabase Dashboard, open **Authentication → Sign In / Providers → Third-Party Auth**, add Firebase, and enter project ID `auvne-eba39`.
 2. Open **SQL Editor**. Copy [`supabase/storage-setup.sql`](./supabase/storage-setup.sql), replace both occurrences of `REPLACE_WITH_FIREBASE_ADMIN_UID` with the UID of the authorized owner account from Firebase Authentication, and run the SQL. It creates/configures the public image bucket and owner-only storage policies.
 3. Copy `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` from Supabase project settings into `.env.local`. Restart the development server and rebuild/redeploy Hosting after changing these values.
-4. In the admin studio, choose an image file when adding a product. When editing a product or storefront, selecting a new file replaces the current image; leaving the picker empty keeps the existing image.
+4. In the admin studio, choose one or more image files when adding or editing a product, then enter each photo's color/variant and view/angle. Existing product photos stay unless removed from the editor. For storefront hero and story images, selecting a new file replaces the current image; leaving the picker empty keeps the existing image.
 
 ## Credentials
 

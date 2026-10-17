@@ -412,19 +412,32 @@ function productRouteId() {
   }
 }
 
-function productColorOptions(product) {
-  const options = Array.isArray(product.colors) ? product.colors : Array.isArray(product.variants) ? product.variants : [];
-  return options.map(option => {
-    if (typeof option === "string") return { label: option, image: "", color: option };
-    if (!option || typeof option !== "object") return null;
+function productImages(product) {
+  const images = Array.isArray(product.images) ? product.images : [];
+  const normalized = images.map(image => typeof image === "string"
+    ? { url: image, color: "", position: "" }
+    : {
+      url: image?.url || image?.image || "",
+      color: image?.color || image?.name || "",
+      position: image?.position || image?.view || ""
+    }).filter(image => image.url);
+  if (normalized.length) return normalized;
+
+  const variants = Array.isArray(product.colors) ? product.colors : Array.isArray(product.variants) ? product.variants : [];
+  const variantImages = variants.map(variant => {
+    if (!variant || typeof variant !== "object") return null;
     return {
-      label: language === "ar"
-        ? option.nameAr || option.colorAr || option.name || option.color || ""
-        : option.name || option.color || option.nameAr || option.colorAr || "",
-      image: option.image || option.imageUrl || option.photo || "",
-      color: option.hex || option.colorHex || option.swatch || option.color || ""
+      url: variant.image || variant.imageUrl || variant.photo || "",
+      color: language === "ar"
+        ? variant.nameAr || variant.colorAr || variant.name || variant.color || ""
+        : variant.name || variant.color || variant.nameAr || variant.colorAr || "",
+      position: variant.position || variant.view || ""
     };
-  }).filter(option => option && (option.label || option.image));
+  }).filter(image => image?.url);
+  if (variantImages.length) return variantImages;
+
+  if (product.image) normalized.push({ url: product.image, color: "", position: "" });
+  return normalized;
 }
 
 function renderProductDetail() {
@@ -443,9 +456,40 @@ function renderProductDetail() {
   const gallery = makeElement("div", "detail-gallery");
   const image = document.createElement("img");
   image.className = "detail-image";
-  image.alt = localizedProduct(product, "name");
-  setImage(image, product.image);
+  const thumbnails = makeElement("div", "detail-thumbnails");
+  const galleryImages = productImages(product);
+  let activeColor = "";
+  let activeGalleryImages = galleryImages;
+  const showGalleryImage = (galleryImage, selectedButton) => {
+    setImage(image, galleryImage.url);
+    image.alt = [localizedProduct(product, "name"), galleryImage.color, galleryImage.position].filter(Boolean).join(" — ");
+    thumbnails.querySelectorAll(".detail-thumbnail").forEach(button => button.setAttribute("aria-pressed", "false"));
+    selectedButton.setAttribute("aria-pressed", "true");
+  };
+  if (galleryImages.length) {
+    setImage(image, galleryImages[0].url);
+    image.alt = [localizedProduct(product, "name"), galleryImages[0].color, galleryImages[0].position].filter(Boolean).join(" — ");
+  } else {
+    setImage(image, product.image);
+    image.alt = localizedProduct(product, "name");
+  }
   gallery.append(image);
+  if (galleryImages.length > 1) {
+    galleryImages.forEach((galleryImage, index) => {
+      const thumbnail = makeElement("button", "detail-thumbnail");
+      thumbnail.type = "button";
+      thumbnail.setAttribute("aria-pressed", index === 0 ? "true" : "false");
+      const thumbImage = document.createElement("img");
+      thumbImage.alt = "";
+      setImage(thumbImage, galleryImage.url);
+      thumbnail.append(thumbImage);
+      thumbnail.title = [galleryImage.color, galleryImage.position].filter(Boolean).join(" — ") || `Photo ${index + 1}`;
+      thumbnail.setAttribute("aria-label", thumbnail.title);
+      thumbnail.addEventListener("click", () => showGalleryImage(galleryImage, thumbnail));
+      thumbnails.append(thumbnail);
+    });
+    gallery.append(thumbnails);
+  }
 
   const info = makeElement("div", "detail-info");
   info.append(
@@ -469,43 +513,45 @@ function renderProductDetail() {
   info.append(ratingRow);
   if (localizedProduct(product, "description")) info.append(makeElement("p", "detail-description", localizedProduct(product, "description")));
 
-  const colors = productColorOptions(product);
-  if (colors.length) {
+  const colors = [...new Set(galleryImages.map(galleryImage => galleryImage.color).filter(Boolean))];
+  if (colors.length > 1) {
     const colorSection = makeElement("div", "detail-colors");
     colorSection.append(makeElement("p", "detail-colors-label", text.availableColors));
     const colorOptions = makeElement("div", "color-options");
-    colors.forEach((option, index) => {
+    colors.forEach((color, index) => {
       const colorButton = makeElement("button", "color-option");
       colorButton.type = "button";
-      colorButton.setAttribute("aria-label", option.label || text.availableColors);
-      colorButton.setAttribute("aria-pressed", "false");
-      colorButton.title = option.label;
-      if (option.color && CSS.supports("color", option.color)) colorButton.style.backgroundColor = option.color;
-      else if (option.image) {
-        const swatchImage = document.createElement("img");
-        swatchImage.alt = "";
-        setImage(swatchImage, option.image);
-        colorButton.append(swatchImage);
-      } else {
-        colorButton.textContent = option.label.slice(0, 1).toUpperCase();
-      }
+      colorButton.setAttribute("aria-label", color);
+      colorButton.setAttribute("aria-pressed", index === 0 ? "true" : "false");
+      colorButton.title = color;
+      colorButton.textContent = color;
       colorButton.addEventListener("click", () => {
-        if (option.image) {
-          setImage(image, option.image);
-          image.alt = `${localizedProduct(product, "name")} — ${option.label}`;
-        }
+        activeColor = color;
+        activeGalleryImages = galleryImages.filter(galleryImage => galleryImage.color === color);
         colorOptions.querySelectorAll(".color-option").forEach(button => button.setAttribute("aria-pressed", "false"));
         colorButton.setAttribute("aria-pressed", "true");
+        const firstImageIndex = galleryImages.indexOf(activeGalleryImages[0]);
+        thumbnails.querySelectorAll(".detail-thumbnail").forEach((button, thumbnailIndex) => {
+          button.hidden = galleryImages[thumbnailIndex].color !== color;
+          if (thumbnailIndex === firstImageIndex) showGalleryImage(activeGalleryImages[0], button);
+        });
+        if (!thumbnails.childElementCount) {
+          const firstImage = activeGalleryImages[0];
+          setImage(image, firstImage.url);
+          image.alt = [localizedProduct(product, "name"), firstImage.color, firstImage.position].filter(Boolean).join(" — ");
+        }
       });
       colorOptions.append(colorButton);
       if (index === 0) {
-        if (option.image) {
-          setImage(image, option.image);
-          image.alt = `${localizedProduct(product, "name")} — ${option.label}`;
-        }
-        colorButton.setAttribute("aria-pressed", "true");
+        activeColor = color;
+        activeGalleryImages = galleryImages.filter(galleryImage => galleryImage.color === color);
       }
     });
+    if (colors.length > 1 && thumbnails.childElementCount) {
+      thumbnails.querySelectorAll(".detail-thumbnail").forEach((button, thumbnailIndex) => {
+        button.hidden = galleryImages[thumbnailIndex].color !== activeColor;
+      });
+    }
     if (colorOptions.childElementCount) colorSection.append(colorOptions);
     if (colorOptions.childElementCount) info.append(colorSection);
   }
